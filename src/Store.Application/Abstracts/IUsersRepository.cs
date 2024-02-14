@@ -9,5 +9,5 @@ public interface IUsersRepository
     public Task<User> GetByEmailAsync(string email);
     public Task<IEnumerable<User>> GetAllAsync();
     public Task DeleteByIdAsync(Guid id);
-    public Task UpdateUserAsync(Guid id, string username, string email, string passwordHash);
+    public Task UpdateUserAsync(Guid id, string? name, string? email, string? passwordHash);
 }
