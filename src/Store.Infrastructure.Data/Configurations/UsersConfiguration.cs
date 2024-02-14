@@ -5,7 +5,7 @@ using Store.Infrastructure.Data.Entities;
 
 namespace Store.Infrastructure.Data.Configurations;
 
-public class UsersConfiguration : IEntityTypeConfiguration<UserEntity>
+internal class UsersConfiguration : IEntityTypeConfiguration<UserEntity>
 {
     public void Configure(EntityTypeBuilder<UserEntity> builder)
     {
