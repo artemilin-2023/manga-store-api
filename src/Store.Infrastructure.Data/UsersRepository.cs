@@ -1,45 +1,63 @@
-﻿using Store.Application.Abstracts;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Scaffolding.Metadata;
+using Store.Application.Abstracts;
 using Store.Domain;
-using Store.Infrastructure.Data.DataContexts;
+using Store.Infrastructure.Data.Entities;
+using Store.Infrastructure.Data.Mappers;
 
 namespace Store.Infrastructure.Data;
 
-public class UsersRepository : IUsersRepository
+public class UsersRepository(DataContext database, IMapper mapper) : IUsersRepository
 {
-    private readonly DataContext database;
+    private readonly DataContext database = database;
+    private readonly IMapper mapper = mapper;
 
-    public UsersRepository(DataContext dataContext)
-    {
-        database = dataContext;
-    }
-    
     public async Task AddAsync(User user)
     {
-        throw new NotImplementedException();
+        var userEntity = mapper.Map<UserEntity>(user);
+        await database.Users.AddAsync(userEntity);
+
+        await database.SaveChangesAsync();
     }
 
     public async Task<User> GetByIdAsync(Guid id)
     {
-        throw new NotImplementedException();
+        var userEntity = await database.Users.FirstAsync(u => u.Id == id);
+        return mapper.Map<User>(userEntity);
     }
 
     public async Task<User> GetByEmailAsync(string email)
     {
-        throw new NotImplementedException();
+        var userEntity = await database.Users.FirstAsync(u => u.Email == email);
+        return mapper.Map<User>(userEntity);
     }
 
     public async Task<IEnumerable<User>> GetAllAsync()
     {
-        throw new NotImplementedException();
+        return database.Users.Select(u => mapper.Map<User>(u));
     }
 
     public async Task DeleteByIdAsync(Guid id)
     {
-        throw new NotImplementedException();
+        var user = await database.Users.FirstAsync(u => u.Id == id);
+        database.Users.Remove(user);
+
+        await database.SaveChangesAsync();
     }
 
-    public async Task UpdateUserAsync(Guid id, string username, string email, string passwordHash)
+    public async Task UpdateUserAsync(Guid id, string? name, string? email, string? passwordHash)
     {
-        throw new NotImplementedException();
+        var user = await database.Users.FirstAsync(u => u.Id == id);
+        var userEntity = new UserEntity()
+        {
+            Id = id,
+            Name = name ?? user.Name,
+            Email = email ?? user.Email,
+            PasswordHash = passwordHash ?? user.PasswordHash
+        };
+        database.Users.Update(userEntity);
+        
+        await database.SaveChangesAsync();
     }
 }
