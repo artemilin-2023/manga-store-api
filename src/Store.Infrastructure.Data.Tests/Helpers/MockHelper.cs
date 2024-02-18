@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Moq;
 using Store.Infrastructure.Data.Entities;
 
@@ -7,28 +8,25 @@ namespace Store.Infrastructure.Data.Tests.Helpers;
 
 public static class MockHelper
 {
-    public static DbSet<UserEntity> SetupUsersDbSetMock(List<UserEntity> dataList)
-    {
-        var mockSet = CreateMockWithBaseSetup(dataList);
-        
-        mockSet.Setup(db => db.AddAsync(It.IsAny<UserEntity>(), It.IsAny<CancellationToken>()))
-                .Callback<UserEntity, CancellationToken>((item, token) => dataList.Add(item));
-
-        // mockSet.Setup(set => set.FirstAsync(It.IsAny<>(), It.IsAny<CancellationToken>())
-
-        return mockSet.Object;
-    }
-
-    private static Mock<DbSet<T>> CreateMockWithBaseSetup<T>(IEnumerable<T> dataList) where T : class
+    public static Mock<DbSet<TItem>> CreateQueryableMockDbSet<TItem>(IEnumerable<TItem> dataList)
+        where TItem : class
     {
         var queryableList = dataList.AsQueryable();
+        var queryableMock = new Mock<DbSet<TItem>>();
         
-        var mockSet = new Mock<DbSet<T>>();
-        mockSet.As<IQueryable<T>>().Setup(m => m.Provider).Returns(queryableList.Provider);
-        mockSet.As<IQueryable<T>>().Setup(m => m.Expression).Returns(queryableList.Expression);
-        mockSet.As<IQueryable<T>>().Setup(m => m.ElementType).Returns(queryableList.ElementType);
-        mockSet.As<IQueryable<T>>().Setup(m => m.GetEnumerator()).Returns(queryableList.GetEnumerator());
+        queryableMock.As<IQueryable<TItem>>().Setup(m => m.Provider).Returns(queryableList.Provider);
+        queryableMock.As<IQueryable<TItem>>().Setup(m => m.Expression).Returns(queryableList.Expression);
+        queryableMock.As<IQueryable<TItem>>().Setup(m => m.ElementType).Returns(queryableList.ElementType);
+        queryableMock.As<IQueryable<TItem>>().Setup(m => m.GetEnumerator()).Returns(queryableList.GetEnumerator());
 
-        return mockSet;
+        return queryableMock;
+    }
+
+    public static Mock<DataContext> CreateDatabaseMockWithUsersDbSet(DbSet<UserEntity> dbSet)
+    {
+        var mockDatabase = new Mock<DataContext>();
+        mockDatabase.Setup(x => x.Users).Returns(dbSet);
+
+        return mockDatabase;
     }
 }

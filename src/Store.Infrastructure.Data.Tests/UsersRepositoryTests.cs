@@ -1,4 +1,6 @@
-﻿using AutoMapper;
+﻿using System.Linq.Expressions;
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Store.Domain;
 using Store.Infrastructure.Data.Entities;
@@ -9,29 +11,28 @@ namespace Store.Infrastructure.Data.Tests;
 
 public class UsersRepositoryTests
 {
-    private UsersRepository usersRepository;
-    private DataContext database;
     private IMapper mapper;
-    private readonly List<UserEntity> fakeUsersDbSetData = DataHelper.GetFakeUsersData();
+    private Mock<DbSet<UserEntity>> mockDbSet;
+    private List<UserEntity> fakeUserData = DataHelper.GetFakeUsersData();
     
-
     [SetUp]
     public void SetUp()
     {
-        var databaseMock = new Mock<DataContext>();
-        databaseMock.Setup(db => db.Users)
-                    .Returns(MockHelper.SetupUsersDbSetMock(fakeUsersDbSetData));
-        database = databaseMock.Object;
+        mockDbSet = MockHelper.CreateQueryableMockDbSet(fakeUserData);
         
         var mapperConfig = new MapperConfiguration(cfg => cfg.AddProfile<UserMappingProfile>());
         mapper = new Mapper(mapperConfig);
-        
-        usersRepository = new UsersRepository(database, mapper);
     }
 
     [Test]
     public void AddAsync_Null_CatchException()
     {
+        mockDbSet.Setup(set => set.AddAsync(It.IsAny<UserEntity>(), It.IsAny<CancellationToken>()))
+                 .Callback<UserEntity, CancellationToken>((item, token) => fakeUserData.Add(item));
+        var database = MockHelper.CreateDatabaseMockWithUsersDbSet(mockDbSet.Object).Object;
+        
+        var usersRepository = new UsersRepository(database, mapper);
+        
         Assert.That(async () => await usersRepository.AddAsync(null), Throws.ArgumentNullException);
     }
 
@@ -39,9 +40,16 @@ public class UsersRepositoryTests
     public async Task AddAsync_CorrectUserEntity_AddUserToDb()
     {
         var newUser = new User(Guid.NewGuid(), "test-user-1", "test@mail.ru", "qwerty");
-
+        
+        // mock set up
+        var expression = It.IsAny<Expression<Func<UserEntity, bool>>>();
+        mockDbSet.Setup(set => set.FirstAsync(expression, It.IsAny<CancellationToken>()).Result)
+                 .Returns(fakeUserData.First(u => u.Id == newUser.Id));
+        var database = MockHelper.CreateDatabaseMockWithUsersDbSet(mockDbSet.Object).Object;
+        var usersRepository = new UsersRepository(database, mapper);
+        
         await usersRepository.AddAsync(newUser);
         var expected = mapper.Map<UserEntity>(newUser);
-        Assert.That(fakeUsersDbSetData[^1] == expected, Is.True);
+        Assert.That(fakeUserData[^1] == expected, Is.True);
     }
 }
